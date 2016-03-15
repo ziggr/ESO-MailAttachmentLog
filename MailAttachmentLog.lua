@@ -13,34 +13,36 @@ MailAttachmentLog.default = {
 local MailRecord = {}
 
 function MailRecord:FromMailId(mail_id)
-    from_user,_, subject,_,_,_,_,_, attach_ct, attach_gold,
-         _,_, since_secs = GetMailItemInfo(mail_id)
-
-    o = { mail_id   = mail_id
-        , from      = from_user
-        , subject   = subject
-        , gold      = attach_gold
-        , attach_ct = attach_ct
-        , ts        = GetTimeStamp() - since_secs
-        }
+    o = { mail_id   = mail_id }
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
--- Record attachment data if already available.
--- Return true if all attachments recorded (also if 0 attachments)
--- Return false if attachments not yet ready. Request sent.
-function MailRecord:LoadAttachments()
-    if 0 == self.attach_ct then return true end
+function MailRecord:GetHeader()
+    d("top "..tostring(self.mail_id))
+    from_user,_, subject,_,_,_,_,_, attach_ct, attach_gold,
+         _,_, since_secs = GetMailItemInfo(mail_id)
+    self.from      = from_user
+    self.subject   = subject
+    self.gold      = attach_gold
+    self.attach_ct = attach_ct
+    self.ts        = GetTimeStamp() - since_secs
+end
 
+function MailRecord:GetBody()
+    self.body = ReadMail(self.mail_id)
+end
+
+function MailRecord:GetAttachments()
+    d("att "..tostring(self.mail_id).. " ct="..tostring(self.attach_ct))
+    if 0 == self.attach_ct then return end
     for i = 1, self.attach_ct do
         _, stack = GetAttachedItemInfo(self.mail_id, i)
         ct = stack
         if 0 == ct then
-            d("la missing "..tostring(self.mail_id))
-            self:RequestAttachments()
-            return false
+            d("att missing "..tostring(self.mail_id))
+            return
         end
         link = GetAttachedItemLink(self.mail_id, i, LINK_STYLE_DEFAULT)
         name = zo_strformat("<<t:1>>", GetItemLinkName(link))
@@ -56,19 +58,19 @@ function MailRecord:LoadAttachments()
             self.attach[i].mm = mm
         end
     end
-    d("la loaded "..tostring(self.mail_id).. " ct="..tostring(#self.attach))
-    return true
+    d("att loaded "..tostring(self.mail_id).. " ct="..tostring(#self.attach))
 end
 
-function MailRecord:RequestAttachments()
-    d("ra requesting " .. tostring(self.mail_id))
+function MailRecord:Load()
+    d("l "..tostring(self.mail_id))
+    self:GetBody()
+    self:GetAttachments()
+end
+
+function MailRecord:RequestFromServer()
+    d("rfs requesting " .. tostring(self.mail_id))
+    self:GetHeader()
     RequestReadMail(self.mail_id)
-end
-
-function MailRecord:ToString()
-    return "from:"     ..tostring(self.from)
-        .." subject:"  ..tostring(self.subject)
-        .." attach_ct:"..tostring(self.attach_ct)
 end
 
 -- Master Merchant Integration -----------------------------------------------
@@ -100,9 +102,9 @@ function MailAttachmentLog:DoIt()
 
     self.history = {}
 
-                        -- Rather than register/deregister over and over as we
+                        -- Rather than register/unregister over and over as we
                         -- iterate through mail, just register once at the
-                        -- start and deregister once at the end.
+                        -- start and unregister once at the end.
     self:Register()
 
     self:FetchStart()
@@ -123,9 +125,11 @@ end
 function MailAttachmentLog:FetchNext(prev_mail_id)
                         -- Increment iteration.
     mail_id = GetNextMailId(prev_mail_id)
+    d("fn "..tostring(mail_id))
     if not mail_id then
         d("fn done")
         self:FetchDone()
+        return
     end
                         -- Do one cycle: load mail into a struct.
                         -- Attempt to load attachment data, too, but
@@ -133,19 +137,9 @@ function MailAttachmentLog:FetchNext(prev_mail_id)
     mr = MailRecord:FromMailId(mail_id)
     self.current_mr = mr
     table.insert(self.history, mr)
-    fetched = mr:LoadAttachments()
+    mr:RequestFromServer()
 
-                        -- Usually we'll suspend here and resume in
-                        -- OnMailReadable().
-    if not fetched then
-        d("fn waiting " ..tostring(mr.mail_id))
-        return
-    end
-
-                        -- If mail already fetched from server, then
-                        -- tail-recurse to the next message.
-    d("fn leaving " ..tostring(mr.mail_id))
-    self:FetchNext(mail_id)
+    d("fn waiting " ..tostring(mr.mail_id))
 end
 
 -- Resume from FetchNext()'s async server request for attachment data.
@@ -161,17 +155,13 @@ function MailAttachmentLog.OnMailReadable(event_id, mail_id)
         d("omr not current_mr " .. tostring(mr.mail_id))
         return
     end
-    fetched = mr:LoadAttachments()
-    if not fetched then
-        d("omr load-after-async fetch still waiting?")
-        return
-    end
+    mr:Load()
     self:FetchNext(mr.mail_id)
 end
 
 -- Done fetching all mail messages and their attachments.
 function MailAttachmentLog:FetchDone()
-    self:Deregister()
+    self:Unregister()
     self:Save()
 end
 
@@ -189,33 +179,18 @@ function MailAttachmentLog:Save()
 end
 
 function MailAttachmentLog:Register()
+    d("reg")
     EVENT_MANAGER:RegisterForEvent( self.name
                                   , EVENT_MAIL_READABLE
                                   , MailAttachmentLog.OnMailReadable )
 end
 
 function MailAttachmentLog:Deregister()
-    EVENT_MANAGER:RegisterForEvent( self.name
-                                  , EVENT_MAIL_READABLE )
+    d("unreg")
+    EVENT_MANAGER:UnregisterForEvent( self.name
+                                    , EVENT_MAIL_READABLE )
 end
 
-
--- util ----------------------------------------------------------------------
-
-function table_is_empty(t)
-    for k in ipairs(t) do
-        return false
-    end
-    return true
-end
-
-function table_size(t)
-    i = 0
-    for k in ipairs(t) do
-        i = i + 1
-    end
-    return i
-end
 
 -- Postamble -----------------------------------------------------------------
 
@@ -225,3 +200,72 @@ EVENT_MANAGER:RegisterForEvent( MailAttachmentLog.name
                               )
 
 ZO_CreateStringId("SI_BINDING_NAME_MailAttachmentLog_DoIt", "Record Mail Attachments")
+
+
+
+--[[
+
+Starting at keyboard MailInbox:New()
+                manager:RefreshData()
+    self:RefreshData()
+    control:RegisterForEvent(EVENT_MAIL_INBOX_UPDATE, function() manager:OnInboxUpdate() end)
+    control:RegisterForEvent(EVENT_MAIL_READABLE, function(_, mailId) manager:OnMailReadable(mailId) end)
+
+    Done in outer loop, before any RequestReadMail()
+        ZO_MailInboxShared_PopulateMailData(mailData, mailId)
+
+function MailInbox:OnSelectionChanged(previouslySelected, selected, reselectingDuringRebuild)
+    self:RequestReadMessage(selected.mailId)
+    RequestReadMail(mailId)
+
+
+
+function MailInbox:OnMailReadable(mailId)
+    self.mailId = mailId
+    self.messageControl:SetHidden(false)
+    KEYBIND_STRIP:UpdateKeybindButtonGroup(self.selectionKeybindStripDescriptor)
+
+    local mailData = self:GetMailData(mailId)
+    ZO_MailInboxShared_PopulateMailData(mailData, mailId)
+    ZO_ScrollList_RefreshVisible(self.list, mailData)
+
+    ZO_MailInboxShared_UpdateInbox(mailData, GetControl(self.messageControl, "From"), GetControl(self.messageControl, "Subject"), GetControl(self.messageControl, "Expires"), GetControl(self.messageControl, "Received"), GetControl(self.messageControl, "Body"))
+    ZO_Scroll_ResetToTop(GetControl(self.messageControl, "Pane"))
+
+    self:RefreshMoneyControls()
+    self:RefreshAttachmentsHeaderShown()
+    self:RefreshAttachmentSlots()
+
+function ZO_MailInboxShared_PopulateMailData(dataTable, mailId)
+    local ...  = GetMailItemInfo(mailId)
+
+function MailInbox:RefreshAttachmentSlots()
+    local mailData = self:GetMailData(self.mailId)
+    local numAttachments = mailData.numAttachments
+    for i = 1, numAttachments do
+        self.attachmentSlots[i]:SetHidden(false)
+        local icon, stack, creator = GetAttachedItemInfo(self.mailId, i)
+
+    ]]
+
+
+--[[
+
+From sirinsidiator
+
+local function OpenNextMail(nextMailId)
+ nextMailId = GetNextMailId(nextMailId)
+ if(nextMailId) then
+  RequestReadMail(nextMailId)
+ end
+end
+
+local function OnMailReadable(_, mailId)
+ -- process attachments
+ OpenNextMail(mailId)
+end
+
+EVENT_MANAGER:RegisterForEvent(EVENT_MAIL_READABLE, OnMailReadable)
+OpenNextMail()
+
+]]
