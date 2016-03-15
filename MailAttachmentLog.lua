@@ -1,5 +1,4 @@
-
-MailAttachmentLog = {}
+local MailAttachmentLog = {}
 MailAttachmentLog.name            = "MailAttachmentLog"
 MailAttachmentLog.version         = "2.3.5.1"
 MailAttachmentLog.savedVarVersion = 1
@@ -9,11 +8,26 @@ MailAttachmentLog.default = {
 
 function MailAttachmentLog.OnAddOnLoaded()
     if addonName ~= MailAttachmentLog.name then return end
-    -- MailAttachmentLog:Initialize()
+    MailAttachmentLog:Initialize()
 end
 
-function MailAttachmentLog.DoIt()
-    d("Do It!")
+function MailAttachmentLog:Initialize()
+    --
+end
+
+function MailAttachmentLog:DoIt()
+    d(":DoIt")
+end
+
+function MailAttachmentLog_DoIt()
+    d("_DoIt")
+    d(tostring(MailAttachmentLog))
+    if MailAttachmentLog then
+        for k,v in ipairs(MailAttachmentLog) do
+            d("  "..tostring(k)..":"..tostring(v))
+        end
+    end
+    MailAttachmentLog:DoIt()
 end
 
 

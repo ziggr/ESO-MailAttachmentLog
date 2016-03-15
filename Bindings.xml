@@ -2,7 +2,7 @@
     <Layer name="SI_KEYBINDINGS_LAYER_GENERAL">
         <Category name="Mail Attachment Log">
             <Action name="MailAttachmentLog_DoIt">
-                <Up>MailAttachmentLog.DoIt()</Up>
+                <Up>MailAttachmentLog_DoIt()</Up>
             </Action>
         </Category>
     </Layer>
