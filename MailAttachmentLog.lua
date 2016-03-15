@@ -55,12 +55,18 @@ function MailRecord:LoadAttachments()
             return
         end
         link = GetAttachedItemLink(self.mail_id, i, LINK_STYLE_DEFAULT)
+        name = zo_strformat("<<t:1>>", GetItemLinkName(link))
         if not self.attach then
             self.attach = {}
         end
         self.attach[i] = { ct   = ct
                          , link = link
+                         , name = name
                          }
+        mm = self:MMPrice(link)
+        if mm then
+            self.attach[i].mm = mm
+        end
     end
 end
 
@@ -72,6 +78,18 @@ end
 
 function MailRecord:WarnMissing()
     d("Please load attachment data by viewing mail: "..self.subject)
+end
+
+-- Master Merchant Integration -----------------------------------------------
+
+
+function MailRecord:MMPrice(link)
+    if not MasterMerchant then return nil end
+    if not link then return nil end
+    mm = MasterMerchant:itemStats(link, false)
+    if not mm then return nil end
+    d("MM for link: "..tostring(link).." "..tostring(mm.avgPrice))
+    return mm.avgPrice
 end
 
 -- Init ----------------------------------------------------------------------
@@ -115,7 +133,7 @@ function MailAttachmentLog:Save(history)
                             )
     self.savedVariables.history = history
     h = self.savedVariables.history
-    -- d("saved " ..tostring(#h).. " mail record(s)." )
+    d(self.name .. ": saved " ..tostring(#h).. " mail record(s)." )
 end
 
 
