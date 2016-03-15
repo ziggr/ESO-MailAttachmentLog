@@ -17,16 +17,31 @@ end
 
 function MailAttachmentLog:DoIt()
     d(":DoIt")
+
+    mail_id = GetNextMailId(nil)
+    while mail_id do
+          senderDisplayName,
+          _,
+          subject,
+          _,
+          _,
+          _,
+          _,
+          _,
+          numbernumAttachments,
+          attachedMoney,
+          _,
+          _,
+          secsSinceReceived
+          = GetMailItemInfo(mail_id)
+          d(tostring(senderDisplayName).." "..tostring(subject).." att:"..tostring(numbernumAttachments))
+
+        mail_id = GetNextMailId(mail_id)
+    end
 end
 
 function MailAttachmentLog_DoIt()
     d("_DoIt")
-    d(tostring(MailAttachmentLog))
-    if MailAttachmentLog then
-        for k,v in ipairs(MailAttachmentLog) do
-            d("  "..tostring(k)..":"..tostring(v))
-        end
-    end
     MailAttachmentLog:DoIt()
 end
 
