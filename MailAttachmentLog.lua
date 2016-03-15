@@ -23,14 +23,38 @@ function MailRecord:FromMailId(mail_id)
         }
     setmetatable(o, self)
     self.__index = self
-    o:LoadAttachments(mail_id)
+    o:LoadAttachments()
     return o
 end
-
-function MailRecord:LoadAttachments(mail_id)
+--
+function MailRecord:LoadAttachments()
     for i = 1, self.attach_ct do
-        _,ct = GetAttachedItemInfo(mail_id, i)
-        link = GetAttachedItemLink(mail_id, i, LINK_STYLE_DEFAULT)
+          icon
+        , stack
+        , creatorName
+        , sellPrice
+        , meetsUsageRequirement
+        , equipType
+        , itemStyle
+        , quality
+           = GetAttachedItemInfo(self.mail_id, i)
+        -- d("mail_id:"                 ..tostring(self.mail_id)
+        -- .." i:"                      ..i
+        -- .." icon: "                  ..tostring(icon)
+        -- .." stack: "                 ..tostring(stack)
+        -- .." creatorName: "           ..tostring(creatorName)
+        -- .." sellPrice: "             ..tostring(sellPrice)
+        -- .." meetsUsageRequirement: " ..tostring(meetsUsageRequirement)
+        -- .." equipType: "             ..tostring(equipType)
+        -- .." itemStyle: "             ..tostring(itemStyle)
+        -- .." quality: "               ..tostring(quality)
+        -- )
+        ct = stack
+        if 0 == ct then
+            self:WarnMissing()
+            return
+        end
+        link = GetAttachedItemLink(self.mail_id, i, LINK_STYLE_DEFAULT)
         if not self.attach then
             self.attach = {}
         end
@@ -44,6 +68,10 @@ function MailRecord:ToString()
     return "from:"     ..tostring(self.from)
         .." subject:"  ..tostring(self.subject)
         .." attach_ct:"..tostring(self.attach_ct)
+end
+
+function MailRecord:WarnMissing()
+    d("Please load attachment data by viewing mail: "..self.subject)
 end
 
 -- Init ----------------------------------------------------------------------
@@ -60,36 +88,35 @@ end
 -- Do It ---------------------------------------------------------------------
 
 function MailAttachmentLog:DoIt()
-    d(":DoIt")
-
+    -- d(":DoIt")
+    history = {}
     mail_id = GetNextMailId(nil)
     while mail_id do
-          -- senderDisplayName,
-          -- _,
-          -- subject,
-          -- _,
-          -- _,
-          -- _,
-          -- _,
-          -- _,
-          -- numbernumAttachments,
-          -- attachedMoney,
-          -- _,
-          -- _,
-          -- secsSinceReceived
-          -- = GetMailItemInfo(mail_id)
-          -- d(tostring(senderDisplayName).." "..tostring(subject).." att:"..tostring(numbernumAttachments))
         mr = MailRecord:FromMailId(mail_id)
         d(mr:ToString())
+        table.insert(history, mr)
         mail_id = GetNextMailId(mail_id)
     end
+    self:Save(history)
 end
 
 function MailAttachmentLog_DoIt()
-    d("_DoIt")
+    -- d("_DoIt")
     MailAttachmentLog:DoIt()
 end
 
+function MailAttachmentLog:Save(history)
+    -- d("saving " ..tostring(#history).. " mail record(s)..." )
+    self.savedVariables = ZO_SavedVars:NewAccountWide(
+                              "MailAttachmentLogVars"
+                            , self.savedVarVersion
+                            , nil
+                            , self.default
+                            )
+    self.savedVariables.history = history
+    h = self.savedVariables.history
+    -- d("saved " ..tostring(#h).. " mail record(s)." )
+end
 
 
 

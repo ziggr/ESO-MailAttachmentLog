@@ -2,7 +2,7 @@
 ## Description: Mail Attachment Log version 2.3.5.1
 ## APIVersion: 100014
 ## Author: ziggr
-## SavedVariables: MailAttachmentLog
+## SavedVariables: MailAttachmentLogVars
 
 MailAttachmentLog.lua
 Bindings.xml
