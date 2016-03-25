@@ -2,8 +2,7 @@ local MailAttachmentLog = {}
 MailAttachmentLog.name            = "MailAttachmentLog"
 MailAttachmentLog.version         = "2.3.5.1"
 MailAttachmentLog.savedVarVersion = 1
-MailAttachmentLog.history         = {}
-MailAttachmentLog.current_mr      = nil     -- MailRecord
+MailAttachmentLog.history         = {}  -- mail_id ==> MailRecord
 MailAttachmentLog.default = {
       history = {}
 }
@@ -13,14 +12,15 @@ MailAttachmentLog.default = {
 local MailRecord = {}
 
 function MailRecord:FromMailId(mail_id)
-    o = { mail_id   = mail_id }
+    o = { mail_id   = mail_id
+        , mail_id_s = tostring(mail_id)
+        }
     setmetatable(o, self)
     self.__index = self
     return o
 end
 
 function MailRecord:GetHeader()
-    d("top "..tostring(self.mail_id))
     from_user,_, subject,_,_,_,_,_, attach_ct, attach_gold,
          _,_, since_secs = GetMailItemInfo(mail_id)
     self.from      = from_user
@@ -62,9 +62,9 @@ function MailRecord:GetAttachments()
 end
 
 function MailRecord:Load()
-    d("l "..tostring(self.mail_id))
-    self:GetBody()
-    self:GetAttachments()
+    self:GetHeader()
+    --self:GetBody()
+    --self:GetAttachments()
 end
 
 function MailRecord:RequestFromServer()
@@ -125,38 +125,38 @@ end
 function MailAttachmentLog:FetchNext(prev_mail_id)
                         -- Increment iteration.
     mail_id = GetNextMailId(prev_mail_id)
-    d("fn "..tostring(mail_id))
     if not mail_id then
         d("fn done")
         self:FetchDone()
         return
     end
-                        -- Do one cycle: load mail into a struct.
-                        -- Attempt to load attachment data, too, but
-                        -- that usually requires an async server request.
-    mr = MailRecord:FromMailId(mail_id)
-    self.current_mr = mr
-    table.insert(self.history, mr)
-    mr:RequestFromServer()
 
-    d("fn waiting " ..tostring(mr.mail_id))
+    if not self.history[tostring(mail_id)] then
+                        -- Haven't yet fetched this one.
+        self.history[tostring(mail_id)] = "requesting..."
+        RequestReadMail(mail_id)
+        d("fn waiting " ..tostring(mail_id))
+        return
+    end
+                        -- Already requested this one.
+                        -- Move on to the next mail (if any).
+    d("fn skip repeat " ..tostring(mail_id))
+    self:FetchNext(mail_id)
 end
 
 -- Resume from FetchNext()'s async server request for attachment data.
 function MailAttachmentLog.OnMailReadable(event_id, mail_id)
     self = MailAttachmentLog
-    d("omr " .. tostring(mail_id))
-    if not self.current_mr then
-        d("omr no  current_mr")
-        return
-    end
-    mr = self.current_mr
-    if mail_id ~= mr.mail_id then
-        d("omr not current_mr " .. tostring(mr.mail_id))
-        return
-    end
+    s = tostring(mail_id)
+    d("omr " .. s)
+    mr = MailRecord:FromMailId(mail_id)
     mr:Load()
-    self:FetchNext(mr.mail_id)
+    self.history[s] = mr
+    self.history[1] = "bob"
+    d("omr ct=" .. table_size(self.history))
+    d("omr mr="..tostring(mr).." h["..s.."]=" .. tostring(self.history[s]))
+    d("omr h="..tostring(self.history))
+    self:FetchNext(mail_id)
 end
 
 -- Done fetching all mail messages and their attachments.
@@ -173,8 +173,11 @@ function MailAttachmentLog:Save()
                             , nil
                             , self.default
                             )
-    self.savedVariables.history = self.history
-    h = self.savedVariables.history
+    h = {}
+    for mail_id_s,mr in ipairs(self.history) do
+        table.insert(h, mr)
+    end
+    self.savedVariables.history = h
     d(self.name .. ": saved " ..tostring(#h).. " mail record(s)." )
 end
 
@@ -185,12 +188,21 @@ function MailAttachmentLog:Register()
                                   , MailAttachmentLog.OnMailReadable )
 end
 
-function MailAttachmentLog:Deregister()
+function MailAttachmentLog:Unregister()
     d("unreg")
     EVENT_MANAGER:UnregisterForEvent( self.name
                                     , EVENT_MAIL_READABLE )
 end
 
+-- util ----------------------------------------------------------------------
+
+function table_size(t)
+    local i = 0
+    for k in ipairs(t) do
+        i = i + 1
+    end
+    return i
+end
 
 -- Postamble -----------------------------------------------------------------
 
