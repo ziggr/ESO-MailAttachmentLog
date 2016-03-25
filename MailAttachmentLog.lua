@@ -63,8 +63,8 @@ end
 
 function MailRecord:Load()
     self:GetHeader()
-    --self:GetBody()
-    --self:GetAttachments()
+    self:GetBody()
+    self:GetAttachments()
 end
 
 function MailRecord:RequestFromServer()
@@ -131,9 +131,9 @@ function MailAttachmentLog:FetchNext(prev_mail_id)
         return
     end
 
-    if not self.history[tostring(mail_id)] then
+    if not self.history[mail_id] then
                         -- Haven't yet fetched this one.
-        self.history[tostring(mail_id)] = "requesting..."
+        self.history[mail_id] = "requesting..."
         RequestReadMail(mail_id)
         d("fn waiting " ..tostring(mail_id))
         return
@@ -147,11 +147,10 @@ end
 -- Resume from FetchNext()'s async server request for attachment data.
 function MailAttachmentLog.OnMailReadable(event_id, mail_id)
     self = MailAttachmentLog
-    s = tostring(mail_id)
-    d("omr " .. s)
+    d("omr " .. tostring(mail_id))
     mr = MailRecord:FromMailId(mail_id)
     mr:Load()
-    self.history[s] = mr
+    self.history[mail_id] = mr
     self:FetchNext(mail_id)
 end
 
