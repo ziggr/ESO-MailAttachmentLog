@@ -1,6 +1,6 @@
-.PHONY: send
+.PHONY: put
 
-send:
+put:
 	git commit -am auto
 	cp -f MailAttachmentLog.lua /Volumes/Elder\ Scrolls\ Online/live/AddOns/MailAttachmentLog/
 	cp -f MailAttachmentLog.txt /Volumes/Elder\ Scrolls\ Online/live/AddOns/MailAttachmentLog/

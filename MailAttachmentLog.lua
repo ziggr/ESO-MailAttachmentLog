@@ -8,82 +8,6 @@ MailAttachmentLog.default = {
       history = {}
 }
 
--- MailRecord ----------------------------------------------------------------
-
-local MailRecord = {}
-
-function MailRecord:FromMailId(mail_id)
-    o = { mail_id   = mail_id }
-    setmetatable(o, self)
-    self.__index = self
-    return o
-end
-
-function MailRecord:GetHeader()
-    d("top "..tostring(self.mail_id))
-    from_user,_, subject,_,_,_,_,_, attach_ct, attach_gold,
-         _,_, since_secs = GetMailItemInfo(mail_id)
-    self.from      = from_user
-    self.subject   = subject
-    self.gold      = attach_gold
-    self.attach_ct = attach_ct
-    self.ts        = GetTimeStamp() - since_secs
-end
-
-function MailRecord:GetBody()
-    self.body = ReadMail(self.mail_id)
-end
-
-function MailRecord:GetAttachments()
-    d("att "..tostring(self.mail_id).. " ct="..tostring(self.attach_ct))
-    if 0 == self.attach_ct then return end
-    for i = 1, self.attach_ct do
-        _, stack = GetAttachedItemInfo(self.mail_id, i)
-        ct = stack
-        if 0 == ct then
-            d("att missing "..tostring(self.mail_id))
-            return
-        end
-        link = GetAttachedItemLink(self.mail_id, i, LINK_STYLE_DEFAULT)
-        name = zo_strformat("<<t:1>>", GetItemLinkName(link))
-        if not self.attach then
-            self.attach = {}
-        end
-        self.attach[i] = { ct   = ct
-                         , link = link
-                         , name = name
-                         }
-        mm = self:MMPrice(link)
-        if mm then
-            self.attach[i].mm = mm
-        end
-    end
-    d("att loaded "..tostring(self.mail_id).. " ct="..tostring(#self.attach))
-end
-
-function MailRecord:Load()
-    d("l "..tostring(self.mail_id))
-    self:GetBody()
-    self:GetAttachments()
-end
-
-function MailRecord:RequestFromServer()
-    d("rfs requesting " .. tostring(self.mail_id))
-    self:GetHeader()
-    RequestReadMail(self.mail_id)
-end
-
--- Master Merchant Integration -----------------------------------------------
-
-function MailRecord:MMPrice(link)
-    if not MasterMerchant then return nil end
-    if not link then return nil end
-    mm = MasterMerchant:itemStats(link, false)
-    if not mm then return nil end
-    d("MM for link: "..tostring(link).." "..tostring(mm.avgPrice))
-    return mm.avgPrice
-end
-
 -- Init ----------------------------------------------------------------------
 
 function MailAttachmentLog.OnAddOnLoaded()
@@ -108,11 +32,10 @@ function MailAttachmentLog:DoIt()
     self:Register()
 
     self:FetchStart()
-
 end
 
 function MailAttachmentLog_DoIt()
-    -- d("_DoIt")
+    d("_DoIt")
     MailAttachmentLog:DoIt()
 end
 
@@ -128,54 +51,22 @@ function MailAttachmentLog:FetchNext(prev_mail_id)
     d("fn "..tostring(mail_id))
     if not mail_id then
         d("fn done")
-        self:FetchDone()
         return
     end
-                        -- Do one cycle: load mail into a struct.
-                        -- Attempt to load attachment data, too, but
-                        -- that usually requires an async server request.
-    mr = MailRecord:FromMailId(mail_id)
-    self.current_mr = mr
-    table.insert(self.history, mr)
-    mr:RequestFromServer()
-
-    d("fn waiting " ..tostring(mr.mail_id))
+    d("fn requesting "..tostring(mail_id))
+    RequestReadMail(mail_id)
+    d("fn waiting " ..tostring(mail_id))
 end
 
 -- Resume from FetchNext()'s async server request for attachment data.
 function MailAttachmentLog.OnMailReadable(event_id, mail_id)
     self = MailAttachmentLog
     d("omr " .. tostring(mail_id))
-    if not self.current_mr then
-        d("omr no  current_mr")
-        return
-    end
-    mr = self.current_mr
-    if mail_id ~= mr.mail_id then
-        d("omr not current_mr " .. tostring(mr.mail_id))
-        return
-    end
-    mr:Load()
-    self:FetchNext(mr.mail_id)
+    self:FetchNext(mail_id)
 end
 
 -- Done fetching all mail messages and their attachments.
 function MailAttachmentLog:FetchDone()
-    self:Unregister()
-    self:Save()
-end
-
-function MailAttachmentLog:Save()
-    -- d("saving " ..tostring(#history).. " mail record(s)..." )
-    self.savedVariables = ZO_SavedVars:NewAccountWide(
-                              "MailAttachmentLogVars"
-                            , self.savedVarVersion
-                            , nil
-                            , self.default
-                            )
-    self.savedVariables.history = self.history
-    h = self.savedVariables.history
-    d(self.name .. ": saved " ..tostring(#h).. " mail record(s)." )
 end
 
 function MailAttachmentLog:Register()
