@@ -152,10 +152,6 @@ function MailAttachmentLog.OnMailReadable(event_id, mail_id)
     mr = MailRecord:FromMailId(mail_id)
     mr:Load()
     self.history[s] = mr
-    self.history[1] = "bob"
-    d("omr ct=" .. table_size(self.history))
-    d("omr mr="..tostring(mr).." h["..s.."]=" .. tostring(self.history[s]))
-    d("omr h="..tostring(self.history))
     self:FetchNext(mail_id)
 end
 
@@ -174,7 +170,7 @@ function MailAttachmentLog:Save()
                             , self.default
                             )
     h = {}
-    for mail_id_s,mr in ipairs(self.history) do
+    for mail_id_s,mr in pairs(self.history) do
         table.insert(h, mr)
     end
     self.savedVariables.history = h
@@ -198,7 +194,7 @@ end
 
 function table_size(t)
     local i = 0
-    for k in ipairs(t) do
+    for k in pairs(t) do
         i = i + 1
     end
     return i
