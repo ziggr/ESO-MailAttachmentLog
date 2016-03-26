@@ -35,7 +35,7 @@ function MailRecord:GetBody()
 end
 
 function MailRecord:GetAttachments()
-    d("att "..tostring(self.mail_id).. " ct="..tostring(self.attach_ct))
+    --d("att "..tostring(self.mail_id).. " ct="..tostring(self.attach_ct))
     if 0 == self.attach_ct then return end
     for i = 1, self.attach_ct do
         _, stack = GetAttachedItemInfo(self.mail_id, i)
@@ -58,19 +58,13 @@ function MailRecord:GetAttachments()
             self.attach[i].mm = mm
         end
     end
-    d("att loaded "..tostring(self.mail_id).. " ct="..tostring(#self.attach))
+    --d("att loaded "..tostring(self.mail_id).. " ct="..tostring(#self.attach))
 end
 
 function MailRecord:Load()
     self:GetHeader()
     self:GetBody()
     self:GetAttachments()
-end
-
-function MailRecord:RequestFromServer()
-    d("rfs requesting " .. tostring(self.mail_id))
-    self:GetHeader()
-    RequestReadMail(self.mail_id)
 end
 
 -- Master Merchant Integration -----------------------------------------------
@@ -80,7 +74,7 @@ function MailRecord:MMPrice(link)
     if not link then return nil end
     mm = MasterMerchant:itemStats(link, false)
     if not mm then return nil end
-    d("MM for link: "..tostring(link).." "..tostring(mm.avgPrice))
+    --d("MM for link: "..tostring(link).." "..tostring(mm.avgPrice))
     return mm.avgPrice
 end
 
@@ -126,7 +120,7 @@ function MailAttachmentLog:FetchNext(prev_mail_id)
                         -- Increment iteration.
     mail_id = GetNextMailId(prev_mail_id)
     if not mail_id then
-        d("fn done")
+        --d("fn done")
         self:FetchDone()
         return
     end
@@ -135,19 +129,19 @@ function MailAttachmentLog:FetchNext(prev_mail_id)
                         -- Haven't yet fetched this one.
         self.history[mail_id] = "requesting..."
         RequestReadMail(mail_id)
-        d("fn waiting " ..tostring(mail_id))
+        --d("fn waiting " ..tostring(mail_id))
         return
     end
                         -- Already requested this one.
                         -- Move on to the next mail (if any).
-    d("fn skip repeat " ..tostring(mail_id))
+    --d("fn skip repeat " ..tostring(mail_id))
     self:FetchNext(mail_id)
 end
 
 -- Resume from FetchNext()'s async server request for attachment data.
 function MailAttachmentLog.OnMailReadable(event_id, mail_id)
     self = MailAttachmentLog
-    d("omr " .. tostring(mail_id))
+    --d("omr " .. tostring(mail_id))
     mr = MailRecord:FromMailId(mail_id)
     mr:Load()
     self.history[mail_id] = mr
@@ -177,14 +171,14 @@ function MailAttachmentLog:Save()
 end
 
 function MailAttachmentLog:Register()
-    d("reg")
+    --d("reg")
     EVENT_MANAGER:RegisterForEvent( self.name
                                   , EVENT_MAIL_READABLE
                                   , MailAttachmentLog.OnMailReadable )
 end
 
 function MailAttachmentLog:Unregister()
-    d("unreg")
+    --d("unreg")
     EVENT_MANAGER:UnregisterForEvent( self.name
                                     , EVENT_MAIL_READABLE )
 end
@@ -212,67 +206,7 @@ ZO_CreateStringId("SI_BINDING_NAME_MailAttachmentLog_DoIt", "Record Mail Attachm
 
 --[[
 
-Starting at keyboard MailInbox:New()
-                manager:RefreshData()
-    self:RefreshData()
-    control:RegisterForEvent(EVENT_MAIL_INBOX_UPDATE, function() manager:OnInboxUpdate() end)
-    control:RegisterForEvent(EVENT_MAIL_READABLE, function(_, mailId) manager:OnMailReadable(mailId) end)
-
-    Done in outer loop, before any RequestReadMail()
-        ZO_MailInboxShared_PopulateMailData(mailData, mailId)
-
-function MailInbox:OnSelectionChanged(previouslySelected, selected, reselectingDuringRebuild)
-    self:RequestReadMessage(selected.mailId)
-    RequestReadMail(mailId)
-
-
-
-function MailInbox:OnMailReadable(mailId)
-    self.mailId = mailId
-    self.messageControl:SetHidden(false)
-    KEYBIND_STRIP:UpdateKeybindButtonGroup(self.selectionKeybindStripDescriptor)
-
-    local mailData = self:GetMailData(mailId)
-    ZO_MailInboxShared_PopulateMailData(mailData, mailId)
-    ZO_ScrollList_RefreshVisible(self.list, mailData)
-
-    ZO_MailInboxShared_UpdateInbox(mailData, GetControl(self.messageControl, "From"), GetControl(self.messageControl, "Subject"), GetControl(self.messageControl, "Expires"), GetControl(self.messageControl, "Received"), GetControl(self.messageControl, "Body"))
-    ZO_Scroll_ResetToTop(GetControl(self.messageControl, "Pane"))
-
-    self:RefreshMoneyControls()
-    self:RefreshAttachmentsHeaderShown()
-    self:RefreshAttachmentSlots()
-
-function ZO_MailInboxShared_PopulateMailData(dataTable, mailId)
-    local ...  = GetMailItemInfo(mailId)
-
-function MailInbox:RefreshAttachmentSlots()
-    local mailData = self:GetMailData(self.mailId)
-    local numAttachments = mailData.numAttachments
-    for i = 1, numAttachments do
-        self.attachmentSlots[i]:SetHidden(false)
-        local icon, stack, creator = GetAttachedItemInfo(self.mailId, i)
-
-    ]]
-
-
---[[
-
-From sirinsidiator
-
-local function OpenNextMail(nextMailId)
- nextMailId = GetNextMailId(nextMailId)
- if(nextMailId) then
-  RequestReadMail(nextMailId)
- end
-end
-
-local function OnMailReadable(_, mailId)
- -- process attachments
- OpenNextMail(mailId)
-end
-
-EVENT_MANAGER:RegisterForEvent(EVENT_MAIL_READABLE, OnMailReadable)
-OpenNextMail()
-
+Need either:
+-- check if mailbox UI is open, if not, barf an error and refuse to start.
+-- request to open the mailbox ui, wait for it to open, then start.
 ]]
