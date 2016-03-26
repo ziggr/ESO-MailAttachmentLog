@@ -16,4 +16,7 @@ This add-on scans your mailbox, then saves all messages and attachments to a Sav
 
 [FONT="Courier New"]MailAttachmentLog_to_csv.lua[/FONT] requires that you have downloaded and installed a standalone Lua interpreter, presumably from [URL="http://www.lua.org/"]lua.org[/URL].
 
+
+Optional: if you have [URL="http://www.esoui.com/downloads/info928-MasterMerchant.html"]Master Merchant[/URL] installed, MailAttachmentLog will look up average price information and use it to calculate attachment value.
+
 --Z
