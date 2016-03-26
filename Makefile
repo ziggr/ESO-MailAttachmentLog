@@ -8,3 +8,8 @@ put:
 
 get:
 	cp -f /Volumes/Elder\ Scrolls\ Online/live/SavedVariables/MailAttachmentLog.lua ../../SavedVariables/
+
+csv:
+	lua MailAttachmentLog_to_csv.lua
+	cp -f ../../SavedVariables/MailAttachmentLog.csv data/
+
