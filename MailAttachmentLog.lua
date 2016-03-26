@@ -1,11 +1,14 @@
 local MailAttachmentLog = {}
 MailAttachmentLog.name            = "MailAttachmentLog"
-MailAttachmentLog.version         = "2.3.5.1"
+MailAttachmentLog.version         = "2.3.7.1"
 MailAttachmentLog.savedVarVersion = 1
 MailAttachmentLog.history         = {}  -- mail_id ==> MailRecord
 MailAttachmentLog.default = {
       history = {}
 }
+MailAttachmentLog.is_mailbox_open = false
+MailAttachmentLog.waiting_for_mailbox_open = false
+
 
 -- MailRecord ----------------------------------------------------------------
 
@@ -41,7 +44,7 @@ function MailRecord:GetAttachments()
         _, stack = GetAttachedItemInfo(self.mail_id, i)
         ct = stack
         if 0 == ct then
-            d("att missing "..tostring(self.mail_id))
+            d(self.name..": attachment info missing "..tostring(self.mail_id))
             return
         end
         link = GetAttachedItemLink(self.mail_id, i, LINK_STYLE_DEFAULT)
@@ -93,7 +96,21 @@ end
 
 function MailAttachmentLog:DoIt()
     -- d(":DoIt")
+                        -- If mailbox UI is already open, then the Mail API
+                        -- calls will work, no need to open the mailbox.
+    if self.is_mailbox_open then
+        self:AfterMailboxOpen()
+    else
+                        -- If the mailbox UI is not open, then the mailbox
+                        -- might not be. Start opening it, and resume when
+                        -- we get the callback.
+        self.waiting_for_mailbox_open = true
+        RequestOpenMailbox()
+    end
+end
 
+function MailAttachmentLog:AfterMailboxOpen()
+    self.waiting_for_mailbox_open = false
     self.history = {}
 
                         -- Rather than register/unregister over and over as we
@@ -152,6 +169,7 @@ end
 function MailAttachmentLog:FetchDone()
     self:Unregister()
     self:Save()
+    CloseMailbox()
 end
 
 function MailAttachmentLog:Save()
@@ -168,6 +186,7 @@ function MailAttachmentLog:Save()
     end
     self.savedVariables.history = h
     d(self.name .. ": saved " ..tostring(#h).. " mail record(s)." )
+    d(self.name .. ": Log out or Quit to write file.")
 end
 
 function MailAttachmentLog:Register()
@@ -182,6 +201,20 @@ function MailAttachmentLog:Unregister()
     EVENT_MANAGER:UnregisterForEvent( self.name
                                     , EVENT_MAIL_READABLE )
 end
+
+function MailAttachmentLog.OnOpenMailbox(event_id)
+    MailAttachmentLog.is_mailbox_open = true
+    --d("OpenMailbox  waiting="..tostring(MailAttachmentLog.waiting_for_mailbox_open))
+    if MailAttachmentLog.waiting_for_mailbox_open then
+        MailAttachmentLog:AfterMailboxOpen()
+    end
+end
+
+function MailAttachmentLog.OnCloseMailbox(event_id)
+    MailAttachmentLog.is_mailbox_open = false
+    --d("CloseMailbox")
+end
+
 
 -- util ----------------------------------------------------------------------
 
@@ -198,6 +231,16 @@ end
 EVENT_MANAGER:RegisterForEvent( MailAttachmentLog.name
                               , EVENT_ADD_ON_LOADED
                               , MailAttachmentLog.OnAddOnLoaded
+                              )
+
+EVENT_MANAGER:RegisterForEvent( MailAttachmentLog.name
+                              , EVENT_MAIL_OPEN_MAILBOX
+                              , MailAttachmentLog.OnOpenMailbox
+                              )
+
+EVENT_MANAGER:RegisterForEvent( MailAttachmentLog.name
+                              , EVENT_MAIL_CLOSE_MAILBOX
+                              , MailAttachmentLog.OnCloseMailbox
                               )
 
 ZO_CreateStringId("SI_BINDING_NAME_MailAttachmentLog_DoIt", "Record Mail Attachments")

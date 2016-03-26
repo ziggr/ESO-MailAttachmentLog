@@ -1,0 +1,19 @@
+Do people email you lots of items for weekly guild auctions? Crafting materials? Need to keep track of them?
+
+This add-on scans your mailbox, then saves all messages and attachments to a SavedVariables file. It can then convert that SavedVariables file to a CSV comma-separated-value file suitable for import into a spreadsheet.
+
+
+[LIST=1]
+[*]Go to Controls > Key Bindings > Mail Attachment Log. Assign a key binding.
+[*]Hit the key binding you assigned earlier.
+[*]Log out or Quit. ESO will then save data, writing SavedVariables/MailAttachmentLog.lua.
+[*]From a terminal window, run
+[FONT="Courier New"]% cd ~/Documents/Elder Scrolls Online/live/AddOns/MailAttachmentLog
+% lua MailAttachmentLog_to_csv.lua
+[/FONT]This creates SavedVariables/MailAttachmentLog.csv
+[*]Import MailAttachmentLog.csv into a spreadsheet.
+[/LIST]
+
+[FONT="Courier New"]MailAttachmentLog_to_csv.lua[/FONT] requires that you have downloaded and installed a standalone Lua interpreter, presumably from [URL="http://www.lua.org/"]lua.org[/URL].
+
+--Z
