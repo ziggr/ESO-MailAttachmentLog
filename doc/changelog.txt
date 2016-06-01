@@ -1,0 +1,13 @@
+[B]2.4.1 2016-05-31[/B]
+[LIST]
+[*]Increment API version for ESO 2.4 (Dark Brotherhood). No other changes.
+[/LIST]
+
+[B]2.3.7.2 2016-03-25[/B]
+[LIST]
+[*] Include missing key bindings.xml file
+[*] Fix math error in calculating approx gold worth
+[/LIST]
+
+[B]2.3.7.1 2016-03-25[/B]
+Initial release.
