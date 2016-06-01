@@ -1,4 +1,4 @@
-.PHONY: get put
+.PHONY: get put csv zip
 
 put:
 	git commit -am auto
@@ -13,3 +13,9 @@ csv:
 	lua MailAttachmentLog_to_csv.lua
 	cp -f ../../SavedVariables/MailAttachmentLog.csv data/
 
+zip:
+	-rm -rf published/MailAttachmentLog published/MailAttachmentLog\ x.x.x.x.zip
+	mkdir -p published/MailAttachmentLog
+	cp ./MailAttachmentLog* published/MailAttachmentLog/
+	cp ./Bindings.xml       published/MailAttachmentLog/
+	cd published; zip -r MailAttachmentLog\ x.x.x.x.zip MailAttachmentLog

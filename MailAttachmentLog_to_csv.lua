@@ -40,7 +40,7 @@ function Message(msg)
     for _, att in ipairs(msg.attach) do
         gold = ""
         if att.mm and att.ct then
-            fp = att.mm * att.mm
+            fp = att.mm * att.ct
             gold = round(fp)
             TOTAL_GOLD = TOTAL_GOLD + gold
         end
