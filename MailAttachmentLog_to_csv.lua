@@ -29,12 +29,12 @@ end
 function Message(msg)
     date_str = iso_date(msg.ts)
 
-    WriteLine{ date_str   = date_str
-             , sender     = msg.from
-             , value_gold = msg.gold
-             , item_name  = msg.subject
-             , item_link  = ""
-             }
+    -- WriteLine{ date_str   = date_str
+    --          , sender     = msg.from
+    --          , value_gold = msg.gold
+    --          , item_name  = msg.subject
+    --          , item_link  = ""
+    --          }
     TOTAL_GOLD = TOTAL_GOLD + msg.gold
     if not msg.attach then return end
     for _, att in ipairs(msg.attach) do
@@ -46,6 +46,9 @@ function Message(msg)
         end
         WriteLine{ date_str   = date_str
                  , sender     = msg.from
+                 , subject    = msg.subject
+                 , ct         = att.ct
+                 , mm         = att.mm
                  , value_gold = gold
                  , item_name  = att.name
                  , item_link  = att.link
@@ -56,9 +59,12 @@ end
 -- Write a line to output file.
 function WriteLine(args)
     -- date_str, sender, value_gold, item_name, item_link)
-    s = string.format( '%s,"%s",%s,"%s",%s\n'
+    s = string.format( '%s,"%s","%s",%s,%s,%s,"%s",%s\n'
                      , args.date_str
                      , args.sender
+                     , args.subject
+                     , args.ct
+                     , args.mm
                      , args.value_gold
                      , args.item_name
                      , args.item_link
@@ -105,6 +111,8 @@ end
                         -- header line
 WriteLine{ date_str   = "# date"
          , sender     = "from"
+         , ct         = "ct"
+         , mm         = "mm_ea"
          , value_gold = "gold"
          , item_name  = "item/subject"
          , item_link  = "link"
