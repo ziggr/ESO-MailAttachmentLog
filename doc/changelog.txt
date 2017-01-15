@@ -1,3 +1,8 @@
+[B]2.6.2 2017-01-14[/B]
+[LIST]
+[*]Clean up CSV output a bit. Include item counts and per-item Master Merchant price. Omit gold attachment lines.
+[/LIST]
+
 [B]2.6.1 2016-10-05[/B]
 [LIST]
 [*]Increment API version for ESO 2.6 (One Tamriel). No other changes.

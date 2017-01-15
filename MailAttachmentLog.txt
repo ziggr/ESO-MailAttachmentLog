@@ -1,5 +1,5 @@
 ## Title: Mail Attachment Log
-## Description: Mail Attachment Log version 2.6.1
+## Description: Mail Attachment Log version 2.6.2
 ## APIVersion: 100017
 ## Author: ziggr
 ## SavedVariables: MailAttachmentLogVars
