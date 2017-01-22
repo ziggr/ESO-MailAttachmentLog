@@ -8,7 +8,7 @@ dofile(IN_FILE_PATH)
 OUT_FILE = assert(io.open(OUT_FILE_PATH, "w"))
 
 local TOTAL_GOLD = 0
-local MAX_ITEM_CT_PER_LINE = 3
+local MAX_ITEM_CT_PER_LINE = 4
 
 -- Lua lacks a split() function. Here's a cheesy hardwired one that works
 -- for our specific need.
@@ -27,20 +27,38 @@ function TableHistory(history)
     end
 end
 
+function merge_stacks(att_table)
+    local merged_table = {}
+    local did_merge    = false
+    for _, att in ipairs(att_table) do
+        local link = att.link
+        if not merged_table[link] then
+            merged_table[link] = att
+        else
+            merged_table[link].ct = merged_table[link].ct + att.ct
+            did_merge = true
+        end
+    end
+                        -- No point in wasting time flattening to produce
+                        -- the very same thing we got as input, re-sequenced.
+    if not did_merge then return att_table end
+
+    local flattened = {}
+    for _, att in pairs(merged_table) do
+        table.insert(flattened, att)
+    end
+    return flattened
+end
+
 -- Parse one email message and its attachments
 function Message(msg)
     date_str = iso_date(msg.ts)
 
-    -- WriteLine{ date_str   = date_str
-    --          , sender     = msg.from
-    --          , value_gold = msg.gold
-    --          , item_name  = msg.subject
-    --          , item_link  = ""
-    --          }
     TOTAL_GOLD = TOTAL_GOLD + msg.gold
     if not msg.attach then return end
+    local msg_attach = merge_stacks(msg.attach)
     local att_list = {}
-    for _, att in ipairs(msg.attach) do
+    for _, att in ipairs(msg_attach) do
         table.insert(att_list, att)
         if MAX_ITEM_CT_PER_LINE <= #att_list then
             WriteLine{ donor    = msg.from
@@ -68,6 +86,7 @@ function prepend_ct(ct, delimiter, s)
     return tostring(ct) .. delimiter .. s
 end
 
+
 -- Write a line to output file.
 function WriteLine(args)
     local name_str = ""
@@ -82,10 +101,10 @@ function WriteLine(args)
     end
 
     -- date_str, sender, value_gold, item_name, item_link)
-    s = string.format( '"%s","%s","%s"\n'
+    s = string.format( '"%s",,,,,"%s","%s"\n'
                      , args.donor
                      , name_str
-                     , link_str
+                     , "Donated by "..args.donor.." "..link_str
                      )
     OUT_FILE:write(s)
 end
@@ -135,5 +154,4 @@ for k, v in pairs(MailAttachmentLogVars["Default"]) do
 end
 OUT_FILE:close()
 
-print("Total gold value: " .. TOTAL_GOLD)
 

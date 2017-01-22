@@ -13,6 +13,10 @@ csv:
 	lua MailAttachmentLog_to_csv.lua
 	cp -f ../../SavedVariables/MailAttachmentLog.csv data/
 
+auction:
+	lua MailAttachmentLog_to_auction.lua
+	cp -f ../../SavedVariables/MailAttachmentLog_auction.csv data/
+
 zip:
 	-rm -rf published/MailAttachmentLog published/MailAttachmentLog\ x.x.x.x.zip
 	mkdir -p published/MailAttachmentLog
