@@ -1,3 +1,8 @@
+[B]2.6.3 2017-01-22[/B] (never published)
+[LIST]
+[*]New MailAttachment_to_auction.lua script for CSV conversion whose output exactly matches what we need for our weekly guild auction.
+[/LIST]
+
 [B]2.6.2 2017-01-14[/B]
 [LIST]
 [*]Clean up CSV output a bit. Include item counts and per-item Master Merchant price. Omit gold attachment lines.
