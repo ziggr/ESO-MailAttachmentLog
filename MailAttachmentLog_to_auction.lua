@@ -1,12 +1,14 @@
 -- Read the SavedVariables file that MailAttachmentLog creates  and convert
--- that to a spreadsheet-compabitle CSV (comma-separated value) file.
+-- that to a spreadsheet-compatible CSV (comma-separated value) file
+-- suitable for usin in our auctions.
 
 IN_FILE_PATH  = "../../SavedVariables/MailAttachmentLog.lua"
-OUT_FILE_PATH = "../../SavedVariables/MailAttachmentLog.csv"
+OUT_FILE_PATH = "../../SavedVariables/MailAttachmentLog_auction.csv"
 dofile(IN_FILE_PATH)
 OUT_FILE = assert(io.open(OUT_FILE_PATH, "w"))
 
 local TOTAL_GOLD = 0
+local MAX_ITEM_CT_PER_LINE = 3
 
 -- Lua lacks a split() function. Here's a cheesy hardwired one that works
 -- for our specific need.
@@ -37,37 +39,53 @@ function Message(msg)
     --          }
     TOTAL_GOLD = TOTAL_GOLD + msg.gold
     if not msg.attach then return end
+    local att_list = {}
     for _, att in ipairs(msg.attach) do
-        gold = ""
-        if att.mm and att.ct then
-            fp = att.mm * att.ct
-            gold = round(fp)
-            TOTAL_GOLD = TOTAL_GOLD + gold
+        table.insert(att_list, att)
+        if MAX_ITEM_CT_PER_LINE <= #att_list then
+            WriteLine{ donor    = msg.from
+                     , att_list = att_list
+                     }
+            att_list = {}
         end
-        WriteLine{ date_str   = date_str
-                 , sender     = msg.from
-                 , subject    = msg.subject
-                 , ct         = att.ct
-                 , mm         = att.mm
-                 , value_gold = gold
-                 , item_name  = att.name
-                 , item_link  = att.link
-                 }
     end
+    if 0 < #att_list then
+            WriteLine{ donor    = msg.from
+                     , att_list = att_list
+                     }
+            att_list = {}
+    end
+end
+
+function string_concat(delimiter, a, b)
+    if a == "" then return b end
+    if b == "" then return a end
+    return a .. delimiter .. b
+end
+
+function prepend_ct(ct, delimiter, s)
+    if ct <= 1 then return s end
+    return tostring(ct) .. delimiter .. s
 end
 
 -- Write a line to output file.
 function WriteLine(args)
+    local name_str = ""
+    local link_str = ""
+    for _, att in ipairs(args.att_list) do
+                        -- We like brackets, so force them with H1.
+        local link_h1 = att.link:gsub("|H0:", "|H1:")
+        local link    = prepend_ct(att.ct, "x", link_h1)
+        local name    = prepend_ct(att.ct, " ", att.name)
+        link_str      = string_concat(" " , link_str, link)
+        name_str      = string_concat(", ", name_str, name)
+    end
+
     -- date_str, sender, value_gold, item_name, item_link)
-    s = string.format( '%s,"%s","%s",%s,%s,%s,"%s",%s\n'
-                     , args.date_str
-                     , args.sender
-                     , args.subject
-                     , args.ct
-                     , args.mm
-                     , args.value_gold
-                     , args.item_name
-                     , args.item_link
+    s = string.format( '"%s","%s","%s"\n'
+                     , args.donor
+                     , name_str
+                     , link_str
                      )
     OUT_FILE:write(s)
 end
@@ -107,16 +125,6 @@ function iso_date(secs_since_1970)
                         , t.sec
                         )
 end
-
-                        -- header line
-WriteLine{ date_str   = "# date"
-         , sender     = "from"
-         , ct         = "ct"
-         , mm         = "mm_ea"
-         , value_gold = "gold"
-         , item_name  = "item/subject"
-         , item_link  = "link"
-         }
 
 -- For each account
 for k, v in pairs(MailAttachmentLogVars["Default"]) do
