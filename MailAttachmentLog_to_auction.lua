@@ -10,6 +10,19 @@ OUT_FILE = assert(io.open(OUT_FILE_PATH, "w"))
 local TOTAL_GOLD = 0
 local MAX_ITEM_CT_PER_LINE = 4
 
+                        -- How many seconds between email messages from
+                        -- the same donor counts as "part of the same lot" ?
+                        --
+                        -- 10 * 60 = ten minutes, probably too long
+                        --  1 * 60 = one minute, probably too short
+                        --
+                        -- Set this too low and you'll have to manually merge
+                        -- some lots in Google Sheets.
+                        -- Set this too high and you'll have to manually split
+                        -- some lots.
+                        --
+local MIN_CONTINUATION_SECS = 10*60
+
 -- Lua lacks a split() function. Here's a cheesy hardwired one that works
 -- for our specific need.
 function split(str)
@@ -20,9 +33,61 @@ function split(str)
            , string.sub(str, 1 + t2)
 end
 
+-- Sort incoming mail by donor, then time.
+-- By donor helps avoid rare cases where two donors send multi-message
+-- lots at the same time, intermingling their messages. By time then
+-- groups multi-message lots together in history.
+function MessageLessThan(a, b)
+    if not a then return b end
+    if not b then return a end
+    if a.from < b.from then
+        return true
+    elseif a.from == b.from then
+        return (a.ts < b.ts )
+    else
+        return false
+    end
+end
+
+-- Does curr_msg appear to be a continuation of prev_msg?
+function IsContinuation(prev_msg, curr_msg)
+    if not prev_msg then return false end
+    if prev_msg.from ~= curr_msg.from then return false end
+    local msg_delta_secs = math.abs(curr_msg.ts - prev_msg.ts)
+    if MIN_CONTINUATION_SECS < msg_delta_secs then
+        return false
+    end
+    return true
+end
+
+-- Copy attachments from second-or-later message to first message
+function MergeOneLot(prev_msg, curr_msg)
+    for _, att in ipairs(curr_msg.attach) do
+        table.insert(prev_msg.attach, att)
+    end
+end
+
+-- Combine multiple adjacent messages from the same sender if they
+-- are within MIN_CONTINUATION_SECS
+function MergeLots(history)
+    local merged_history = {}
+    local prev_msg = nil
+    for _, curr_msg in ipairs(history) do
+        if IsContinuation(prev_msg, curr_msg) then
+            MergeOneLot(prev_msg, curr_msg)
+        else
+            table.insert(merged_history, curr_msg)
+        end
+        prev_msg = curr_msg
+    end
+    return merged_history
+end
+
 -- Parse the ["history'] table
 function TableHistory(history)
-    for _, msg in ipairs(history) do
+    table.sort(history, MessageLessThan)
+    local merged_history = MergeLots(history)
+    for _, msg in ipairs(merged_history) do
         Message(msg)
     end
 end
