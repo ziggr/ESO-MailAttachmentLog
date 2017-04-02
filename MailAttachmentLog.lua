@@ -186,7 +186,7 @@ function MailAttachmentLog:Save()
     end
     self.savedVariables.history = h
     d(self.name .. ": saved " ..tostring(#h).. " mail record(s)." )
-    d(self.name .. ": Log out or Quit to write file.")
+    d(self.name .. ": /reloadui, Log out, or Quit to write file.")
 end
 
 function MailAttachmentLog:Register()
