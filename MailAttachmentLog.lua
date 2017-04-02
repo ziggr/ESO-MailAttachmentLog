@@ -1,6 +1,6 @@
 local MailAttachmentLog = {}
 MailAttachmentLog.name            = "MailAttachmentLog"
-MailAttachmentLog.version         = "2.6.3"
+MailAttachmentLog.version         = "2.7.1"
 MailAttachmentLog.savedVarVersion = 1
 MailAttachmentLog.history         = {}  -- mail_id ==> MailRecord
 MailAttachmentLog.default = {
