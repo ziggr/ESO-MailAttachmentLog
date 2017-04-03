@@ -1,5 +1,3 @@
-// REGEXES will fail to recognize "200x" prefixes.
-
 // constants
 COL_DONOR            = 1;
 COL_TICKET_VALUE     = 2;
@@ -85,6 +83,7 @@ function DeleteRows(row_index, row_delete_ct)
 }
 
 // Split a single row into multiple, one for each link in its COL_LINKS text.
+// Returns resulting split rows, item link column.
 function SplitRow(row_index)
 {
   var sheet      = SpreadsheetApp.getActiveSheet();
@@ -104,6 +103,9 @@ function SplitRow(row_index)
       var cell_range = sheet.getRange(row_index + i, COL_LINKS)
       cell_range.setValue("Donated by " + dl.donor_name + ": " + link_arr[i])
   }
+
+  var result_range = sheet.getRange(row_index, COL_LINKS, row_insert_ct + 1, 1)
+  return result_range
 }
 
 // I don't know why array.concat() doesn't do anything, but it doesn't
@@ -142,6 +144,7 @@ function MergedDonorLinkArr(row_index, row_ct)
 // Merge two or more adjacent rows into as few rows as possible.
 // The result might have more than one row if there are more item links
 // than can fit on a single chat line.
+// Returns resulting range, item link column.
 function MergeRows(row_index, row_ct)
 {
   var sheet     = SpreadsheetApp.getActiveSheet();
@@ -170,6 +173,9 @@ function MergeRows(row_index, row_ct)
     var cell_range = sheet.getRange(row_index + row_i, COL_LINKS)
     cell_range.setValue("Donated by " + merged_dl.donor_name + ":" + txt)
   }
+
+  var result_range = sheet.getRange(row_index, COL_LINKS, need_row_ct, 1)
+  return result_range
 }
 
 // Merge up to link_ct links from start_link_index.
@@ -205,7 +211,8 @@ function UISplitRows()
   var sel_range  = sheet.getActiveRange();
   if (1 != sel_range.getNumRows()) throw "Can split only single rows." ;
   var row_index  = sel_range.getRowIndex();
-  SplitRow(row_index)
+  var sel_range  = SplitRow(row_index)
+  sheet.setActiveSelection(sel_range)
 }
 
 function UIMergeRows()
@@ -215,6 +222,7 @@ function UIMergeRows()
   var sel_range  = sheet.getActiveRange();
   if (sel_range.getNumRows() <= 1) throw "Can merge only two or more rows." ;
   var row_index  = sel_range.getRowIndex();
-  MergeRows(row_index, sel_range.getNumRows())
+  var sel_range  = MergeRows(row_index, sel_range.getNumRows())
+  sheet.setActiveSelection(sel_range)
 }
 
