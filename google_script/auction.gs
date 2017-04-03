@@ -40,7 +40,7 @@ function SplitLinkText(link_text)
                 // - the capture itself (what we want)
                 // - the stuff before or after the capture (empty string we ignore)
                 // So filter that out.
-  var re_one_link     = /(\|H\d:item:[\d:]+\|h\|h)/;
+  var re_one_link     = / *([\dx]*\|H\d:item:[\d:]+\|h\|h) */;
   var split_link_arr  = link_text.split(re_one_link);
   var link_arr        = []
   for (var i = 1; i <= split_link_arr.length; ++i)
