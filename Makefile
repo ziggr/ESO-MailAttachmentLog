@@ -8,14 +8,16 @@ put:
 
 get:
 	cp -f /Volumes/Elder\ Scrolls\ Online/live/SavedVariables/MailAttachmentLog.lua ../../SavedVariables/
+	cp ../../SavedVariables/MailAttachmentLog.lua data/
 
 csv:
 	lua MailAttachmentLog_to_csv.lua
 	cp -f ../../SavedVariables/MailAttachmentLog.csv data/
 
 auction:
-	lua MailAttachmentLog_to_auction.lua
+	lua MailAttachmentLog_to_auction.lua | pbcopy
 	cp -f ../../SavedVariables/MailAttachmentLog_auction.csv data/
+	echo "Copied to clipboard. Go paste somewhere."
 
 zip:
 	-rm -rf published/MailAttachmentLog published/MailAttachmentLog\ x.x.x.x.zip

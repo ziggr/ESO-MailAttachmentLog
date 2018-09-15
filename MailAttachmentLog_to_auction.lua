@@ -38,8 +38,8 @@ end
 -- lots at the same time, intermingling their messages. By time then
 -- groups multi-message lots together in history.
 function MessageLessThan(a, b)
-    if not a then return b end
-    if not b then return a end
+    if not (a and a.from and a.ts) then return b end
+    if not (b and b.from and b.ts) then return a end
     if a.from < b.from then
         return true
     elseif a.from == b.from then
@@ -51,13 +51,14 @@ end
 
 -- Does curr_msg appear to be a continuation of prev_msg?
 function IsContinuation(prev_msg, curr_msg)
-    if not prev_msg then return false end
-    if prev_msg.from ~= curr_msg.from then return false end
-    local msg_delta_secs = math.abs(curr_msg.ts - prev_msg.ts)
-    if MIN_CONTINUATION_SECS < msg_delta_secs then
-        return false
-    end
-    return true
+    return false -- 2017-08-15 continuation is dropping rows
+    -- if not prev_msg then return false end
+    -- if prev_msg.from ~= curr_msg.from then return false end
+    -- local msg_delta_secs = math.abs(curr_msg.ts - prev_msg.ts)
+    -- if MIN_CONTINUATION_SECS < msg_delta_secs then
+    --     return false
+    -- end
+    -- return true
 end
 
 -- Copy attachments from second-or-later message to first message
@@ -172,6 +173,14 @@ function WriteLine(args)
                      , "Donated by "..args.donor.." "..link_str
                      )
     OUT_FILE:write(s)
+
+    -- date_str, sender, value_gold, item_name, item_link)
+    t = string.format( '%s\t\t\t\t\t%s\t%s'
+                     , args.donor
+                     , name_str
+                     , "Donated by "..args.donor.." "..link_str
+                     )
+    print(t)
 end
 
 -- Return table keys, sorted, as an array
@@ -211,12 +220,16 @@ function iso_date(secs_since_1970)
 end
 
 -- For each account
-for k, v in pairs(MailAttachmentLogVars["Default"]) do
-    if (    MailAttachmentLogVars["Default"][k]["$AccountWide"]
-        and MailAttachmentLogVars["Default"][k]["$AccountWide"]["history"]) then
-        TableHistory(MailAttachmentLogVars["Default"][k]["$AccountWide"]["history"])
-    end
-end
+-- for k, v in pairs(MailAttachmentLogVars["Default"]) do
+--     if (    MailAttachmentLogVars["Default"][k]["$AccountWide"]
+--         and MailAttachmentLogVars["Default"][k]["$AccountWide"]["history"]) then
+--         TableHistory(MailAttachmentLogVars["Default"][k]["$AccountWide"]["history"])
+--     end
+-- end
+
+-- for just ETCAuctions
+TableHistory(MailAttachmentLogVars["Default"]["@ETCAuctions"]["$AccountWide"]["history"])
+
 OUT_FILE:close()
 
 
